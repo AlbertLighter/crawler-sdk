@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crawler-sdk/platforms/douyin"
 	"crawler-sdk/platforms/xhs"
 	"encoding/json"
 	"fmt"
@@ -13,14 +12,14 @@ import (
 func main() {
 	// 平台特定的 cookies
 	const xhsCookie = "a1=188axxxxxxxx; web_session=04006bxxxxxxxx" // 替换为你的小红书 cookie
-	const douyinCookie = "your_douyin_cookie_here"                 // 替换为你的抖音 cookie
+	// const douyinCookie = "your_douyin_cookie_here"                  // 替换为你的抖音 cookie
 
 	// 示例用户ID
 	const xhsUserID = "5b459a74e8ac2b5da3336423"
 
 	// 1. 独立实例化每个平台的客户端
 	xhsClient := xhs.New(xhsCookie)
-	douyinClient := douyin.New(douyinCookie)
+	// douyinClient := douyin.New(douyinCookie)
 
 	// 2. 创建一个带超时的上下文
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -43,10 +42,10 @@ func main() {
 	fmt.Println(string(prettyJSON))
 
 	// 5. 调用抖音的视频接口
-	fmt.Println("\n--- 抖音平台 (示例) ---")
-	videosDouyin, err := douyinClient.GetVideos("golang教程")
-	if err != nil {
-		log.Fatalf("从抖音获取视频失败: %v", err)
-	}
-	fmt.Printf("成功从抖音获取到视频: %v\n", videosDouyin)
+	// fmt.Println("\n--- 抖音平台 (示例) ---")
+	// videosDouyin, err := douyinClient.GetVideos("golang教程")
+	// if err != nil {
+	// 	log.Fatalf("从抖音获取视频失败: %v", err)
+	// }
+	// fmt.Printf("成功从抖音获取到视频: %v\n", videosDouyin)
 }

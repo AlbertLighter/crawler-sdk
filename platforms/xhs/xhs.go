@@ -20,9 +20,14 @@ type Client struct {
 // New 创建一个新的小红书客户端实例
 // cookie: 用于身份验证的小红书 cookie 字符串
 func New(cookie string) *Client {
-	return &Client{
+	c := &Client{
 		client: http.NewClient(cookie),
 	}
+	// c.client.AddRequestMiddleware(SignXYS)
+	c.client.AddRequestMiddleware(SignXS)
+	c.client.AddRequestMiddleware(SignXSC)
+	c.client.AddRequestMiddleware(SignTraceID)
+	return c
 }
 
 // GetUser 实现了获取用户信息的逻辑

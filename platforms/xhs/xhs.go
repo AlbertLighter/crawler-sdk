@@ -1,6 +1,7 @@
 package xhs
 
 import (
+	"context"
 	"fmt"
 
 	"resty.dev/v3"
@@ -16,9 +17,14 @@ func New(client *resty.Client) *Client {
 	return &Client{client: client}
 }
 
-// GetVideos 实现了获取视频的逻辑
-func (x *Client) GetVideos(query string) ([]string, error) {
+// GetVideos 实现了获取视频的逻辑 (保留为示例)
+func (c *Client) GetVideos(query string) ([]string, error) {
 	fmt.Printf("正在从小红书获取查询 [%s] 的视频...\n", query)
 	// 在这里实现具体的视频获取逻辑
 	return []string{"xhs_note_1", "xhs_note_2"}, nil
+}
+
+// GetUser 实现了获取用户信息的逻辑
+func (c *Client) GetUser(ctx context.Context, userID string) (UserDetail, error) {
+	return c.getUserDetail(ctx, userID)
 }

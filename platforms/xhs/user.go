@@ -2,13 +2,11 @@ package xhs
 
 import (
 	"context"
-	"crawler-sdk/internal/crypto/xhs"
 	"encoding/json"
 	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -32,7 +30,7 @@ type UserDetail map[string]interface{}
 type Note map[string]interface{}
 
 // getUserDetail 获取小红书用户详细信息
-func (c *Client) getUserDetail(ctx context.Context, userID string) (UserDetail, error) {
+func (c *Client) GetUserDetail(ctx context.Context, userID string) (UserDetail, error) {
 	reqURL := fmt.Sprintf("%s/user/profile/%s", webHost, userID)
 	resp, err := c.client.R().
 		SetContext(ctx).
@@ -72,7 +70,7 @@ func (c *Client) getUserDetail(ctx context.Context, userID string) (UserDetail, 
 }
 
 // getUserNotes 获取用户发布的笔记列表
-func (c *Client) getUserNotes(ctx context.Context, userID, cookie string, offset, limit int) ([]Note, error) {
+func (c *Client) GetUserNotes(ctx context.Context, userID string, offset, limit int) ([]Note, error) {
 	var allNotes []Note
 	var cursor string
 	hasMore := true
@@ -87,33 +85,9 @@ func (c *Client) getUserNotes(ctx context.Context, userID, cookie string, offset
 			"image_formats": []string{"jpg", "webp", "avif"},
 		}
 
-		// 加密
-		encryptor := xhs.NewXsEncrypt()
-		a1 := getCookieValue(cookie, "a1")
-		ts := fmt.Sprintf("%d", time.Now().Unix()*1000)
-		signedURL, err := url.Parse(apiURL)
-		if err != nil {
-			return nil, fmt.Errorf("URL解析失败: %w", err)
-		}
-		q := signedURL.Query()
-		for k, v := range params {
-			q.Set(k, fmt.Sprintf("%v", v))
-		}
-		signedURL.RawQuery = q.Encode()
-
-		xs, err := encryptor.EncryptXs(signedURL.String(), a1, ts, "xhs-pc-web")
-		if err != nil {
-			return nil, fmt.Errorf("加密 'x-s' 失败: %w", err)
-		}
-
 		fullURL := fmt.Sprintf("%s%s", apiHost, apiURL)
 		resp, err := c.client.R().
 			SetContext(ctx).
-			SetHeaders(map[string]string{
-				"Cookie": cookie,
-				"X-S":    xs,
-				"X-T":    ts,
-			}).
 			SetQueryParamsFromValues(toURLValues(params)).
 			Get(fullURL)
 

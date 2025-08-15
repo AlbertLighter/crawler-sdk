@@ -96,22 +96,47 @@ func (x *XscEncrypt) EncryptXsc(xs, xt, platform, a1, x1, x4, b1 string) ([]byte
 	// x10 is hardcoded to 24 in the Python example, so we'll use that.
 	// If it needs to be random, uncomment the rand.Intn line.
 	// x10 := rand.Intn(20) + 10 // random.randint(10, 29)
-	x10 := 24
-
+	x10 := 0
+	// 	var _ = ""
+	// 	, l = ""
+	// 	, p = e.headers["X-Sign"] || ""
+	// 	, h = _ && l || p
+	// 	, m = getSigCount(h)
+	// 	, g = localStorage.getItem(b.q2)//b1
+	// 	, v = localStorage.getItem(b.z7) || b.fI
+	// 	, A = {
+	// 	  s0: (0,
+	// 	  f.SW)(x),
+	// 	  s1: "",
+	// 	  x0: v,
+	// 	  x1: b.i8,
+	// 	  x2: x || "PC",
+	// 	  x3: "ugc",
+	// 	  x4: "0.79.4",
+	// 	  x5: d.Z.get(b.o4),
+	// 	  x6: _,
+	// 	  x7: l,
+	// 	  x8: g,
+	// 	  x9: (0,
+	// 	  u.tb)("".concat(_).concat(l).concat(g)),
+	// 	  x10: m,
+	// 	  x11: "normal"
+	//   }
 	obj := map[string]interface{}{
 		"s0":  5,
 		"s1":  "",
 		"x0":  "1",
-		"x1":  x1,
+		"x1":  "4.2.4",
 		"x2":  "Windows",
-		"x3":  platform,
-		"x4":  x4,
+		"x3":  "ugc",
+		"x4":  "0.79.4",
 		"x5":  a1,
-		"x6":  xt,
-		"x7":  xs,
+		"x6":  "",
+		"x7":  "",
 		"x8":  b1,
 		"x9":  x9,
 		"x10": x10,
+		"x11": "normal",
 	}
 	jsonBytes, err := json.Marshal(obj)
 	if err != nil {

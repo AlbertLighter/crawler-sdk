@@ -115,3 +115,10 @@ func TestEncodeToB58(t *testing.T) {
 	encoded := EncodeToB58(arr)
 	fmt.Println(encoded)
 }
+
+// EncryptEncodeUtf8
+func TestEncryptEncodeUtf8(t *testing.T) {
+	input := `{"s0":5,"s1":"","x0":"1","x1":"4.2.4","x2":"Windows","x3":"ugc","x4":"0.79.4","x5":"1989d69b653ej0uroayuyvsm4vdy26twup2h6vzan50000384309","x6":"","x7":"","x8":"I38rHdgsjopgIvesdVwgIC+oIELmBZ5e3VwXLgFTIxS3bqwErFeexd0ekncAzMFYnqthIhJeDnMDKutRI3KsYorWHPtGrbV0P9WfIi/eWc6eYqtyQApPI37ekmR6QL+5Ii6sdneeSfqYHqwl2qt5B0DBIx+PGDi/sVtkIxdsxuwr4qtiIhuaIE3e3LV0I3VTIC7e0utl2ADmsLveDSKsSPw5IEvsiVtJOqw8BuwfPpdeTFWOIx4TIiu6ZPwrPut5IvlaLbgs3qtxIxes1VwHIkumIkIyejgsY/WTge7eSqte/D7sDcpipedeYrDtIC6eDVw2IENsSqtlnlSuNjVtIvoekqt3cZ7sVo4gIESyIhEG+9DUIvzy4I8OIic7ZPwAIviu4o/sDLds6PwVIC7eSd7ej/Y4IEve1SiMtVwUIids3s/sxZNeiVtbcUeeYVwvIvkazA0eSVwhLfKsfPwoIxltIxZSouwOgVwpsr4heU/e6LveDPwFIvgs1ros1DZiIi7sjbos3grFIE0e3PtvIibROqwOOqthIxesxPw7IhAeVPthIh/sYqtSGqwymPwDIvIkI3It4aGS4Y/eiutjIimrIEOsSVtzBoFM/9vej9ZvIiENGutzrutlIvve3PtUOpKe1Y6s3LMoIh7sVd0siPtPLuwwIveeSPwRIiNeksrLI37eD9KeWVtRI37sxuwU4eQNIEH+Iv7sxM6ex7vsYDosSPtzIkL1IE4RaPtLICrYIEgei/iEGUKsWVtbIEPZzVwuwS7eVI/sfPta/Pt2IxPAIERLeVtLmVwBIxvsYr0e3I==","x9":-1872476738,"x10":0,"x11":"normal"}`
+	encoded := EncryptEncodeUtf8(input)
+	fmt.Println(encoded)
+}

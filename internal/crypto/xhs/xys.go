@@ -43,7 +43,7 @@ func XYS(params, a1 string) string {
 	if err != nil {
 		return ""
 	}
-	ret := encryptEncodeUtf8(string(js))
+	ret := EncryptEncodeUtf8(string(js))
 	return "XYS_" + commonBase64.EncodeToString(ret)
 }
 
@@ -197,7 +197,7 @@ func decode(s string) ([]byte, error) {
 	return num.Bytes(), nil
 }
 
-func encryptEncodeUtf8(input string) []byte {
+func EncryptEncodeUtf8(input string) []byte {
 	encodeUri := url.PathEscape(input)
 	var output []byte
 	for i := 0; i < len(encodeUri); i++ {

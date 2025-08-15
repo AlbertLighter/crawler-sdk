@@ -8,7 +8,7 @@ import (
 )
 
 // 1. 获取上传许可
-func (c *XhsClient) getUploadPermit(client *resty.Client) (*resty.Response, error) {
+func (c *XhsClient) GetUploadPermit(client *resty.Client) (*resty.Response, error) {
 	fmt.Println("Step 1: Getting upload permit...")
 	resp, err := c.client.R().
 		SetQueryParams(map[string]string{
@@ -17,13 +17,6 @@ func (c *XhsClient) getUploadPermit(client *resty.Client) (*resty.Response, erro
 			"file_count": "1",
 			"version":    "1",
 			"source":     "web",
-		}).
-		SetHeaders(map[string]string{
-			"Accept":        "application/json, text/plain, */*",
-			"Authorization": "",
-			"Origin":        "https://creator.xiaohongshu.com",
-			"Referer":       "https://creator.xiaohongshu.com/",
-			"User-Agent":    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0",
 		}).
 		Get("https://creator.xiaohongshu.com/api/media/v1/upload/creator/permit")
 
@@ -42,12 +35,9 @@ func (c *XhsClient) getUploadPermit(client *resty.Client) (*resty.Response, erro
 }
 
 // 2. 上传文件
-func uploadFile(permitResp *resty.Response, filePath string) (*resty.Response, error) {
+func (c *XhsClient) UploadFile(permitResp *resty.Response, filePath string) (*resty.Response, error) {
 	fmt.Println("\nStep 2: Uploading file...")
 
-	// 占位符：这里需要从 getUploadPermit 的响应中解析出真实的上传地址和凭证
-	// 这是一个示例结构，你需要根据实际返回的 JSON 进行调整
-	// 例如: uploadAddr := gjson.Get(permitResp.String(), "data.uploadTempPermits.0.uploadAddr").String()
 	uploadURL := "https://ros-upload-d4.xhscdn.com/spectrum/wc7dm3ayWRWG0399QncgK1AAjBMdETEUhZReftWx49SAtrQ" // 从响应中解析
 	uploadToken := "GODLoWDc60IQpItfzv8AOTnIBNM:eyJkZWFkbGluZSI6..."                                         // 从响应中解析
 
@@ -56,8 +46,7 @@ func uploadFile(permitResp *resty.Response, filePath string) (*resty.Response, e
 		return nil, fmt.Errorf("failed to read file %s: %w", filePath, err)
 	}
 
-	client := resty.New()
-	resp, err := client.R().
+	resp, err := c.UploadClient.R().
 		SetBody(fileContent).
 		SetHeaders(map[string]string{
 			// 这个 Authorization 头是 PUT 请求特有的，格式和 API 请求的不同
@@ -84,118 +73,12 @@ func uploadFile(permitResp *resty.Response, filePath string) (*resty.Response, e
 	return resp, nil
 }
 
-// 3. 发布笔记 (函数和结构体已根据 69_Full.txt 的日志更新)
-
-// PublishNotePayload 是根据抓包结果创建的发布笔记的完整请求体结构
-type PublishNotePayload struct {
-	Common    CommonInfo  `json:"common"`
-	ImageInfo interface{} `json:"image_info"` // 根据日志为 null，具体结构未知
-	VideoInfo VideoInfo   `json:"video_info"`
-}
-
-type CommonInfo struct {
-	Type          string        `json:"type"`
-	NoteID        string        `json:"note_id"`
-	Source        string        `json:"source"`
-	Title         string        `json:"title"`
-	Desc          string        `json:"desc"`
-	Ats           []string      `json:"ats"`
-	HashTag       []string      `json:"hash_tag"`
-	BusinessBinds string        `json:"business_binds"`
-	PrivacyInfo   PrivacyInfo   `json:"privacy_info"`
-	GoodsInfo     interface{}   `json:"goods_info"` // 根据日志为 {}
-	BizRelations  []string      `json:"biz_relations"`
-	CapaTraceInfo CapaTraceInfo `json:"capa_trace_info"`
-}
-
-type PrivacyInfo struct {
-	OpType  int      `json:"op_type"`
-	Type    int      `json:"type"`
-	UserIDs []string `json:"user_ids"`
-}
-
-type CapaTraceInfo struct {
-	ContextJson string `json:"contextJson"`
-}
-
-type VideoInfo struct {
-	Fileid            string            `json:"fileid"`
-	FileID            string            `json:"file_id"`
-	FormatWidth       int               `json:"format_width"`
-	FormatHeight      int               `json:"format_height"`
-	VideoPreviewType  string            `json:"video_preview_type"`
-	CompositeMetadata CompositeMetadata `json:"composite_metadata"`
-	Timelines         []string          `json:"timelines"`
-	Cover             CoverInfo         `json:"cover"`
-	Chapters          []string          `json:"chapters"`
-	ChapterSyncText   bool              `json:"chapter_sync_text"`
-	Segments          SegmentsInfo      `json:"segments"`
-}
-
-type CompositeMetadata struct {
-	Video MediaMetadata `json:"video"`
-	Audio MediaMetadata `json:"audio"`
-}
-
-type MediaMetadata struct {
-	Bitrate                 int    `json:"bitrate"`
-	ColourPrimaries         string `json:"colour_primaries,omitempty"`
-	Duration                int    `json:"duration"`
-	Format                  string `json:"format"`
-	FrameRate               int    `json:"frame_rate,omitempty"`
-	Height                  int    `json:"height,omitempty"`
-	MatrixCoefficients      string `json:"matrix_coefficients,omitempty"`
-	Rotation                int    `json:"rotation,omitempty"`
-	TransferCharacteristics string `json:"transfer_characteristics,omitempty"`
-	Width                   int    `json:"width,omitempty"`
-	Channels                int    `json:"channels,omitempty"`
-	SamplingRate            int    `json:"sampling_rate,omitempty"`
-}
-
-type CoverInfo struct {
-	Fileid        string       `json:"fileid"`
-	FileID        string       `json:"file_id"`
-	Height        int          `json:"height"`
-	Width         int          `json:"width"`
-	Frame         FrameInfo    `json:"frame"`
-	Stickers      StickersInfo `json:"stickers"`
-	Fonts         []string     `json:"fonts"`
-	ExtraInfoJson string       `json:"extra_info_json"`
-}
-
-type FrameInfo struct {
-	Ts           int  `json:"ts"`
-	IsUserSelect bool `json:"is_user_select"`
-	IsUpload     bool `json:"is_upload"`
-}
-
-type StickersInfo struct {
-	Version int      `json:"version"`
-	Neptune []string `json:"neptune"`
-}
-
-type SegmentsInfo struct {
-	Count     int           `json:"count"`
-	NeedSlice bool          `json:"need_slice"`
-	Items     []SegmentItem `json:"items"`
-}
-
-type SegmentItem struct {
-	Mute             int               `json:"mute"`
-	Speed            int               `json:"speed"`
-	Start            int               `json:"start"`
-	Duration         float64           `json:"duration"`
-	Transcoded       int               `json:"transcoded"`
-	MediaSource      int               `json:"media_source"`
-	OriginalMetadata CompositeMetadata `json:"original_metadata"`
-}
-
 // publishNote 函数根据提供的参数构建并发送发布笔记的请求。
 // title: 笔记标题
 // desc: 笔记描述
 // videoFileID: 视频文件的 fileId (来自上传步骤)
 // coverFileID: 封面图片的 fileId (来自上传步骤)
-func publishNote(client *resty.Client, title, desc, videoFileID, coverFileID string) (*resty.Response, error) {
+func (c *XhsClient) PublishNote(title, desc, videoFileID, coverFileID string) (*resty.Response, error) {
 	fmt.Println("\nStep 3: Publishing note...")
 
 	publishURL := "https://edith.xiaohongshu.com/web_api/sns/v2/note"
@@ -268,19 +151,8 @@ func publishNote(client *resty.Client, title, desc, videoFileID, coverFileID str
 		},
 	}
 
-	resp, err := client.R().
+	resp, err := c.client.R().
 		SetBody(payload). // 使用 SetBody 发送 JSON 数据
-		SetHeaders(map[string]string{
-			"Accept":        "application/json, text/plain, */*",
-			"Authorization": authorization,
-			"Cookie":        cookie,
-			"Content-Type":  "application/json;charset=UTF-8",
-			"Origin":        "https://creator.xiaohongshu.com",
-			"Referer":       "https://creator.xiaohongshu.com/",
-			"User-Agent":    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36 Edg/138.0.0.0",
-			"x-s":           xs,
-			"x-t":           xt,
-		}).
 		Post(publishURL)
 
 	if err != nil {
@@ -295,12 +167,12 @@ func publishNote(client *resty.Client, title, desc, videoFileID, coverFileID str
 	return resp, nil
 }
 
-func test() {
+func (c *XhsClient) test() {
 	// 创建一个 resty 客户端用于后续的 API 请求
 	client := resty.New()
 
 	// 1. 获取上传许可
-	permitResp, err := getUploadPermit(client)
+	permitResp, err := c.GetUploadPermit(client)
 	if err != nil {
 		panic(err)
 	}
@@ -310,7 +182,7 @@ func test() {
 
 	// 2. 上传文件
 	// 占位符：将 "path/to/your/image.png" 替换为你的文件路径
-	uploadResp, err := uploadFile(permitResp, "path/to/your/image.png")
+	uploadResp, err := c.UploadFile(permitResp, "path/to/your/image.png")
 	if err != nil {
 		panic(err)
 	}
@@ -329,7 +201,7 @@ func test() {
 	videoFileID := "spectrum/ovWswFtPGlBalii4HplaQzFL_DsPYOO2Mr64dstTmR8EHUg" // 示例 video file ID
 	coverFileID := "spectrum/wc7dm3ayWRWG0399QncgK1AAjBMdETEUhZReftWx49SAtrQ" // 示例 cover file ID
 
-	publishResp, err := publishNote(client, noteTitle, noteDesc, videoFileID, coverFileID)
+	publishResp, err := c.PublishNote(noteTitle, noteDesc, videoFileID, coverFileID)
 	if err != nil {
 		panic(err)
 	}

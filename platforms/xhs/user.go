@@ -92,6 +92,7 @@ func (c *XhsClient) GetUserNotes(ctx context.Context, userID string, offset, lim
 		resp, err := c.client.R().
 			SetContext(ctx).
 			SetQueryParamsFromValues(toURLValues(params)).
+			
 			Get(fullURL)
 
 		if err != nil {

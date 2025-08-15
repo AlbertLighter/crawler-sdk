@@ -13,21 +13,25 @@ import (
 )
 
 type XhsClient struct {
-	client *resty.Client
+	client       *resty.Client
+	UploadClient *resty.Client
 }
 
 // New 创建一个新的小红书客户端实例
 // cookie: 用于身份验证的小红书 cookie 字符串
 func New(cookie string) *XhsClient {
 	c := &XhsClient{
-		client: http.NewClient(cookie),
+		client:       http.NewClient(cookie),
+		UploadClient: resty.New(),
 	}
 	c.client.AddRequestMiddleware(headers)
 	c.client.AddRequestMiddleware(SignXYS)
 	// c.client.AddRequestMiddleware(SignXS)
 	c.client.AddRequestMiddleware(SignXSC)
 	c.client.AddRequestMiddleware(SignTraceID)
+	c.UploadClient.AddRequestMiddleware(QSign)
 	c.client.SetProxy("http://127.0.0.1:8888")
+	c.UploadClient.SetProxy("http://127.0.0.1:8888")
 	return c
 }
 
@@ -124,5 +128,23 @@ func SignTraceID(c *resty.Client, req *resty.Request) error {
 	xrayTraceID := encryptor.X_Xray_TraceID(traceID)
 	req.Header.Set("x-b3-traceid", traceID)
 	req.Header.Set("x-xray-traceid", xrayTraceID)
+	return nil
+}
+
+func QSign(c *resty.Client, req *resty.Request) error {
+	cookie := c.Header().Get("Cookie")
+	a1 := getCookieValue(cookie, "a1")
+	q, err := xhs.GetQSignAuth(xhs.QSignAuthOptions{
+		SecretId:  a1,
+		SecretKey: a1,
+		Method:    req.Method,
+		Pathname:  req.URL,
+		Query:     map[string]string{},
+		Headers:   map[string]string{},
+	})
+	if err != nil {
+		return fmt.Errorf("获取QSignAuth失败: %w", err)
+	}
+	req.Header.Set("Authorization", q)
 	return nil
 }

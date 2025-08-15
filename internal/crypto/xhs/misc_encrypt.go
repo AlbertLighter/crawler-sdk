@@ -16,7 +16,7 @@ import (
 func XorTransformArray(source []byte) []byte {
 	result := make([]byte, len(source))
 	for i := range source {
-		result[i] = source[i] ^ HexKey[i]
+		result[i] = (source[i] ^ HexKey[i]) & 0xFF
 	}
 	return result
 }

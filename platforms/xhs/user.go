@@ -82,7 +82,7 @@ func (c *XhsClient) GetUserNotes(ctx context.Context, userID string, offset, lim
 			"num":           30,
 			"cursor":        cursor,
 			"user_id":       userID,
-			"image_formats": "jpg,webp,avif",
+			"image_formats": "jpg",
 			// xsec_token=ABn830XCOxiqnEyuW9NzS0hmuNr9Se3HJ3v-pZFRItuHo%3D&xsec_source=pc_feed
 			// "xsec_token":  "ABn830XCOxiqnEyuW9NzS0hmuNr9Se3HJ3v-pZFRItuHo=",
 			// "xsec_source": "pc_feed",

@@ -99,9 +99,15 @@ func BuildPayloadArray(hexParameter, a1Value, appIdentifier, stringParam string)
 	ts := time.Now().UnixNano() / int64(time.Millisecond)
 	startupTs := ts - (int64(StartupTimeOffsetMin) + rand.Int63n(StartupTimeOffsetMax-StartupTimeOffsetMin))
 
+	// 输出 startupTs 的年月日时分秒毫秒格式
+	// t := time.UnixMilli(startupTs)
+	// fmt.Printf("startupTs: %s\n", t.Format("2006-01-02 15:04:05.000"))
+
 	var arr []byte
 	arr = append(arr, VersionBytes...)
-
+	// ts = 1755236499790
+	// startupTs = 1755236496112
+	// randNum = 885084357
 	randBytes := Uint32ToLeBytes(randNum)
 	arr = append(arr, randBytes...)
 
@@ -127,6 +133,7 @@ func BuildPayloadArray(hexParameter, a1Value, appIdentifier, stringParam string)
 
 	arr = append(arr, BuildEnvironmentBytes()...)
 
+	// fmt.Println(arr)
 	return arr
 }
 

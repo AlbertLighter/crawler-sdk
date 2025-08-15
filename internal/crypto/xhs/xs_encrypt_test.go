@@ -65,7 +65,12 @@ func TestSign(t *testing.T) {
 	// This test is more of an integration test and requires actual valid data to pass.
 	// The purpose here is to ensure it runs without panicking and returns a string.
 	t.Run("Successful sign generation", func(t *testing.T) {
-		signature := Sign("GET", "/api/v2/note/feed", "test_a1", "test_xsec_appid", url.Values{})
+		params := url.Values{}
+		params.Add("cursor", "")
+		params.Add("image_formats", "jpg,webp,avif")
+		params.Add("num", "30")
+		params.Add("user_id", "5d5c36ab0000000001008656")
+		signature := Sign("GET", "/api/sns/web/v1/user_posted", "1989d69b653ej0uroayuyvsm4vdy26twup2h6vzan50000384309", "xhs-pc-web", params)
 		if signature == "" {
 			t.Error("Sign() returned an empty string")
 		}
@@ -74,17 +79,18 @@ func TestSign(t *testing.T) {
 
 // GenerateDValue
 func TestGenerateDValue(t *testing.T) {
-	content := "https://www.xiaohongshu.com/api/sns/web/v1/user_posted?cursor=684ebc77000000002100a2c4&image_formats=jpg,webp,avif&num=30&user_id=5d5c36ab0000000001008656&xsec_source=pc_feed&xsec_token=ABn830XCOxiqnEyuW9NzS0hmuNr9Se3HJ3v-pZFRItuHo="
+	content := "/api/sns/web/v1/user_posted?num=30&cursor=&user_id=5d5c36ab0000000001008656&image_formats=jpg,webp,avif"
+	// content := "/api/sns/web/v1/user_posted?cursor=&image_formats=jpg,webp,avif&num=30&user_id=5d5c36ab0000000001008656"
 	dValue := GenerateDValue(content)
 	fmt.Println(dValue)
 }
 
 // BuildSignature
 func TestBuildSignature(t *testing.T) {
-	dValue := "1234567890"
-	a1Value := "1234567890"
-	xsecAppID := "1234567890"
-	contentString := "1234567890"
+	dValue := "303f33198638f87bfef55047d5915433"
+	a1Value := "1989d69b653ej0uroayuyvsm4vdy26twup2h6vzan50000384309"
+	xsecAppID := "xhs-pc-web"
+	contentString := "/api/sns/web/v1/user_posted?num=30&cursor=&user_id=5d5c36ab0000000001008656&image_formats=jpg,webp,avif"
 	signature := BuildSignature(dValue, a1Value, xsecAppID, contentString)
 	fmt.Println(signature)
 }
@@ -93,5 +99,19 @@ func TestBuildSignature(t *testing.T) {
 func TestEncodeToB64(t *testing.T) {
 	data := "1234567890"
 	encoded := EncodeToB64(data)
+	fmt.Println(encoded)
+}
+
+// XorTransformArray
+func TestXorTransformArray(t *testing.T) {
+	arr := []byte{119, 104, 96, 41, 197, 80, 193, 52, 125, 168, 22, 133, 177, 40, 41, 41, 240, 114, 63, 172, 152, 1, 0, 0, 15, 0, 0, 0, 11, 5, 0, 0, 103, 0, 0, 0, 245, 250, 246, 220, 67, 253, 61, 190, 52, 49, 57, 56, 57, 100, 54, 57, 98, 54, 53, 51, 101, 106, 48, 117, 114, 111, 97, 121, 117, 121, 118, 115, 109, 52, 118, 100, 121, 50, 54, 116, 119, 117, 112, 50, 104, 54, 118, 122, 97, 110, 53, 48, 48, 48, 48, 51, 56, 52, 51, 48, 57, 10, 120, 104, 115, 45, 112, 99, 45, 119, 101, 98, 1, 213, 249, 83, 102, 103, 201, 181, 131, 99, 94, 7, 68, 250, 132, 21}
+	xorResult := XorTransformArray(arr)
+	fmt.Println(xorResult)
+}
+
+// EncodeToB58
+func TestEncodeToB58(t *testing.T) {
+	arr := []byte{216, 63, 75, 188, 15, 53, 115, 237, 63, 222, 173, 216, 159, 191, 226, 76, 194, 235, 243, 202, 171, 152, 204, 102, 60, 153, 204, 230, 120, 60, 156, 206, 0, 51, 25, 12, 243, 249, 247, 220, 67, 253, 61, 190, 180, 113, 25, 168, 113, 64, 36, 176, 166, 212, 68, 11, 121, 100, 55, 118, 115, 239, 33, 217, 37, 81, 98, 249, 168, 86, 71, 124, 117, 52, 181, 181, 23, 69, 232, 126, 78, 165, 191, 30, 211, 55, 153, 102, 155, 229, 218, 198, 194, 201, 77, 15, 166, 69, 95, 251, 58, 137, 162, 138, 89, 77, 248, 44, 38, 15, 176, 247, 180, 142, 61, 207, 190, 125, 209, 64, 103, 107, 204, 177}
+	encoded := EncodeToB58(arr)
 	fmt.Println(encoded)
 }

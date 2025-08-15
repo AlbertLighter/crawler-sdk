@@ -30,7 +30,7 @@ type UserDetail map[string]interface{}
 type Note map[string]interface{}
 
 // getUserDetail 获取小红书用户详细信息
-func (c *Client) GetUserDetail(ctx context.Context, userID string) (UserDetail, error) {
+func (c *XhsClient) GetUserDetail(ctx context.Context, userID string) (UserDetail, error) {
 	reqURL := fmt.Sprintf("%s/user/profile/%s", webHost, userID)
 	resp, err := c.client.R().
 		SetContext(ctx).
@@ -70,19 +70,22 @@ func (c *Client) GetUserDetail(ctx context.Context, userID string) (UserDetail, 
 }
 
 // getUserNotes 获取用户发布的笔记列表
-func (c *Client) GetUserNotes(ctx context.Context, userID string, offset, limit int) ([]Note, error) {
+func (c *XhsClient) GetUserNotes(ctx context.Context, userID string, offset, limit int) ([]Note, error) {
 	var allNotes []Note
 	var cursor string
 	hasMore := true
 	endLength := offset + limit
-
+	cursor = ""
 	for hasMore && len(allNotes) < endLength {
 		apiURL := "/api/sns/web/v1/user_posted"
 		params := map[string]interface{}{
 			"num":           30,
 			"cursor":        cursor,
 			"user_id":       userID,
-			"image_formats": []string{"jpg", "webp", "avif"},
+			"image_formats": "jpg,webp,avif",
+			// xsec_token=ABn830XCOxiqnEyuW9NzS0hmuNr9Se3HJ3v-pZFRItuHo%3D&xsec_source=pc_feed
+			// "xsec_token":  "ABn830XCOxiqnEyuW9NzS0hmuNr9Se3HJ3v-pZFRItuHo=",
+			// "xsec_source": "pc_feed",
 		}
 
 		fullURL := fmt.Sprintf("%s%s", apiHost, apiURL)

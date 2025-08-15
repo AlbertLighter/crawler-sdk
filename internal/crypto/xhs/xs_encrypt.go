@@ -9,8 +9,126 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/rand"
+	"net/url"
+	"sort"
 	"strings"
+	"time"
 )
+
+func BuildContentString(method, uri string, payload url.Values) string {
+	if method == "POST" {
+		jsonData, _ := json.Marshal(payload)
+		return uri + string(jsonData)
+	} else {
+		if len(payload) == 0 {
+			return uri
+		}
+		return fmt.Sprintf("%s?%s", uri, payload.Encode())
+	}
+}
+
+func GenerateDValue(content string) string {
+	hash := md5.Sum([]byte(content))
+	return hex.EncodeToString(hash[:])
+}
+
+func BuildSignature(dValue, a1Value, xsecAppID, contentString string) string {
+	payloadArray := BuildPayloadArray(dValue, a1Value, xsecAppID, contentString)
+	xorResult := XorTransformArray(payloadArray)
+	return EncodeToB58(xorResult)
+}
+
+func Sign(method, uri, a1, xsecAppid string, params url.Values) string {
+	signatureData := NewSignatureDataTemplate()
+	contentString := ""
+	if strings.ToUpper(method) == "GET" {
+		// 排序
+		keys := make([]string, 0, len(params))
+		for k := range params {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		var sortedParams []string
+		for _, k := range keys {
+			value := params.Get(k)
+			sortedParams = append(sortedParams, k+"="+value)
+		}
+		contentString = uri + "?" + strings.Join(sortedParams, "&")
+	} else {
+		payload, _ := json.Marshal(params)
+		contentString = uri + string(payload)
+	}
+
+	dValue := GenerateDValue(contentString)
+	signatureData.X1 = xsecAppid
+	signatureData.X3 = X3Prefix + BuildSignature(dValue, a1, xsecAppid, contentString)
+	signatureJSON, _ := json.Marshal(signatureData)
+
+	encoded := base64.StdEncoding.EncodeToString(signatureJSON)
+	return XYSPrefix + EncodeToB64(encoded)
+}
+
+func EncodeTimestampV2(ts int64, randomizeFirst bool) []byte {
+	key := bytes.Repeat([]byte{TimestampXORKey}, 8)
+	arr := Uint64ToLeBytes(uint64(ts))
+
+	encoded := make([]byte, 8)
+	for i, a := range arr {
+		encoded[i] = a ^ key[i]
+	}
+
+	if randomizeFirst {
+		encoded[0] = byte(rand.Intn(256))
+	}
+	return encoded
+}
+
+func BuildEnvironmentBytes() []byte {
+	var buffer bytes.Buffer
+	buffer.WriteByte(EnvStaticBytes[0])
+	buffer.WriteByte(byte(rand.Intn(245) + 10))
+	buffer.Write(EnvStaticBytes[1:])
+	return buffer.Bytes()
+}
+
+func BuildPayloadArray(hexParameter, a1Value, appIdentifier, stringParam string) []byte {
+	rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	randNum := rand.Uint32()
+	ts := time.Now().UnixNano() / int64(time.Millisecond)
+	startupTs := ts - (int64(StartupTimeOffsetMin) + rand.Int63n(StartupTimeOffsetMax-StartupTimeOffsetMin))
+
+	var arr []byte
+	arr = append(arr, VersionBytes...)
+
+	randBytes := Uint32ToLeBytes(randNum)
+	arr = append(arr, randBytes...)
+
+	xorKey := randBytes[0]
+
+	arr = append(arr, EncodeTimestamp(ts, true)...)
+	arr = append(arr, Uint64ToLeBytes(uint64(startupTs))...)
+	arr = append(arr, Uint32ToLeBytes(FixedIntValue1)...)
+	arr = append(arr, Uint32ToLeBytes(FixedIntValue2)...)
+
+	stringParamLength := len(stringParam)
+	arr = append(arr, Uint32ToLeBytes(uint32(stringParamLength))...)
+
+	md5Bytes, _ := hex.DecodeString(hexParameter)
+	xorMd5Bytes := make([]byte, 8)
+	for i := 0; i < 8; i++ {
+		xorMd5Bytes[i] = md5Bytes[i] ^ xorKey
+	}
+	arr = append(arr, xorMd5Bytes...)
+
+	arr = append(arr, StrToLenPrefixedBytes(a1Value)...)
+	arr = append(arr, StrToLenPrefixedBytes(appIdentifier)...)
+
+	arr = append(arr, BuildEnvironmentBytes()...)
+
+	return arr
+}
 
 // XsEncrypt 提供了小红书 xs 相关的加密功能
 type XsEncrypt struct {

@@ -14,7 +14,7 @@ func main() {
 	// const douyinCookie = "your_douyin_cookie_here"                  // 替换为你的抖音 cookie
 
 	// 示例用户ID
-	const xhsUserID = "6763862e000000001500472d"
+	const xhsUserID = "5d5c36ab0000000001008656"
 
 	// 1. 独立实例化每个平台的客户端
 	xhsClient := xhs.New(xhsCookie)
@@ -34,7 +34,7 @@ func main() {
 	notes, err := xhsClient.GetUserNotes(ctx, xhsUserID, 0, 10)
 	if err != nil {
 		log.Fatalf("获取小红书用户笔记失败: %v", err)
-	}
+	} 
 	fmt.Println(notes)
 
 	// 4. 格式化为JSON并打印结果

@@ -12,44 +12,24 @@ import (
 	"resty.dev/v3"
 )
 
-// Client 是小红书平台的客户端
-type Client struct {
+type XhsClient struct {
 	client *resty.Client
 }
 
 // New 创建一个新的小红书客户端实例
 // cookie: 用于身份验证的小红书 cookie 字符串
-func New(cookie string) *Client {
-	c := &Client{
+func New(cookie string) *XhsClient {
+	c := &XhsClient{
 		client: http.NewClient(cookie),
 	}
-	// c.client.AddRequestMiddleware(SignXYS)
 	c.client.AddRequestMiddleware(headers)
-	c.client.AddRequestMiddleware(SignXS)
+	c.client.AddRequestMiddleware(SignXYS)
+	// c.client.AddRequestMiddleware(SignXS)
 	c.client.AddRequestMiddleware(SignXSC)
 	c.client.AddRequestMiddleware(SignTraceID)
 	c.client.SetProxy("http://127.0.0.1:8888")
 	return c
 }
-
-// GET https://edith.xiaohongshu.com/api/sns/web/v1/user_posted?num=30&cursor=684ebc77000000002100a2c4&user_id=5d5c36ab0000000001008656&image_formats=jpg,webp,avif&xsec_token=ABn830XCOxiqnEyuW9NzS0hmuNr9Se3HJ3v-pZFRItuHo%3D&xsec_source=pc_feed HTTP/1.1
-// Host: edith.xiaohongshu.com
-// Connection: keep-alive
-// sec-ch-ua-platform: "Windows"
-// sec-ch-ua:
-// sec-ch-ua-mobile: ?0
-// User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0
-// Accept: application/json, text/plain, */*
-// Origin: https://www.xiaohongshu.com
-// Sec-Fetch-Site: same-site
-// Sec-Fetch-Mode: cors
-// Sec-Fetch-Dest: empty
-// Referer: https://www.xiaohongshu.com/
-
-// GET https://edith.xiaohongshu.com/api/sns/web/v1/user_posted?cursor=&image_formats=jpg&image_formats=webp&image_formats=avif&num=30&user_id=6763862e000000001500472d HTTP/1.1
-// Host: edith.xiaohongshu.com
-// User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36
-// Accept-Encoding: gzip, deflate
 
 func headers(c *resty.Client, req *resty.Request) error {
 	fmt.Println("headers")
@@ -70,8 +50,24 @@ func headers(c *resty.Client, req *resty.Request) error {
 
 func SignXYS(c *resty.Client, req *resty.Request) error {
 	fmt.Println("SignXYS")
-	xsc := xhs.XYS(req.URL, req.Header.Get("Cookie"))
+	cookie := c.Header().Get("Cookie")
+	u, err := url.Parse(req.URL)
+	if err != nil {
+		return err
+	}
+	fmt.Print(u)
+	a1 := getCookieValue(cookie, "a1")
+	// xsc := xhs.XYS(req.URL, a1)
+	fmt.Println(req.Method)
+	fmt.Println(u.Path)
+	fmt.Println(a1)
+	fmt.Println("xhs-pc-web")
+	fmt.Println(req.QueryParams)
+	xsc := xhs.Sign(req.Method, u.Path, a1, "xhs-pc-web", req.QueryParams)
 	req.Header.Set("X-s", xsc)
+	ts := fmt.Sprintf("%d", time.Now().UnixMilli())
+	req.Header.Set("X-t", ts)
+
 	return nil
 }
 

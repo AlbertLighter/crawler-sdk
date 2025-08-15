@@ -78,7 +78,7 @@ func buildX3(randNum uint32, ts int64, startupTs int64, hash string, a1, platfor
 	arr = append(arr, randData...)
 
 	// 时间戳
-	arr = append(arr, encodeTimestamp(ts, true)...)
+	arr = append(arr, EncodeTimestamp(ts, true)...)
 
 	// 启动时间戳
 	arr = binary.LittleEndian.AppendUint64(arr, uint64(startupTs))
@@ -104,7 +104,7 @@ func buildX3(randNum uint32, ts int64, startupTs int64, hash string, a1, platfor
 	return arr
 }
 
-func encodeTimestamp(ts int64, randomizeFirst bool) []byte {
+func EncodeTimestamp(ts int64, randomizeFirst bool) []byte {
 	key := []byte{41, 41, 41, 41, 41, 41, 41, 41}
 	arr := make([]byte, 8)
 	binary.LittleEndian.PutUint64(arr, uint64(ts))

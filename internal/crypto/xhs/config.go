@@ -1,5 +1,85 @@
 package xhs
 
+import "encoding/hex"
+
+const (
+	// Max32Bit is the maximum value for a 32-bit unsigned integer.
+	Max32Bit uint32 = 0xFFFFFFFF
+	// MaxSigned32Bit is the maximum value for a 32-bit signed integer.
+	MaxSigned32Bit int32 = 0x7FFFFFFF
+
+	// Base58Alphabet is the character set for Base58 encoding.
+	Base58Alphabet = "NOPQRStuvwxWXYZabcyz012DEFTKLMdefghijkl4563GHIJBC7mnop89+/AUVqrsOPQefghijkABCDEFGuvwz0123456789xy"
+	// StandardBase64Alphabet is the standard Base64 character set.
+	StandardBase64Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+	// CustomBase64Alphabet is the custom Base64 character set used by XHS.
+	CustomBase64Alphabet = "ZmserbBoHQtNP+wOcza/LpngG8yJq42KWYj0DSfdikx3VT16IlUAFM97hECvuRX5"
+	// Base58Base is the base for Base58 encoding.
+	Base58Base = 58
+	// ByteSize is the size of a byte.
+	ByteSize = 256
+
+	// TimestampBytesCount is the length of the timestamp byte array.
+	TimestampBytesCount = 16
+	// TimestampXORKey is the XOR key for timestamp encoding.
+	TimestampXORKey = 41
+	// StartupTimeOffsetMin is the minimum offset for startup time.
+	StartupTimeOffsetMin = 1000
+	// StartupTimeOffsetMax is the maximum offset for startup time.
+	StartupTimeOffsetMax = 4000
+
+	// ExpectedHexLength is the expected length of the hex parameter.
+	ExpectedHexLength = 32
+	// OutputByteCount is the number of output bytes after processing.
+	OutputByteCount = 8
+	// HexChunkSize is the size of a hex character chunk.
+	HexChunkSize = 2
+
+	// RandomByteCount is the number of random bytes to generate.
+	RandomByteCount = 4
+	// FixedIntValue1 is a fixed integer value used in the payload.
+	FixedIntValue1 = 15
+	// FixedIntValue2 is another fixed integer value used in the payload.
+	FixedIntValue2 = 1291
+
+	// X3Prefix is the prefix for the x3 signature field.
+	X3Prefix = "mns0101_"
+	// XYSPrefix is the prefix for the final signature string.
+	XYSPrefix = "XYS_"
+)
+
+var (
+	// HexKey is the XOR key for the payload transformation.
+	HexKey, _ = hex.DecodeString("af572b95ca65b2d9ec76bb5d2e97cb653299cc663399cc663399cce673399cce6733190c06030100000000008040209048241289c4e271381c0e0703018040a05028148ac56231180c0683c16030984c2693c964b259ac56abd5eaf5fafd7e3f9f4f279349a4d2e9743a9d4e279349a4d2e9f47a3d1e8f47239148a4d269341a8d4623110884422190c86432994ca6d3e974baddee773b1d8e47a35128148ac5623198cce6f3f97c3e1f8f47a3d168b45aad562b158ac5e2f1f87c3e9f4f279349a4d269b45aad56")
+
+	// VersionBytes are the version identifier bytes.
+	VersionBytes = []byte{119, 104, 96, 41}
+	// FixedSeparatorBytes are fixed separator bytes.
+	FixedSeparatorBytes = []byte{16, 0, 0, 0, 15, 5, 0, 0, 47, 1, 0, 0}
+
+	// EnvStaticBytes are static bytes for the environment information.
+	EnvStaticBytes = []byte{1, 249, 83, 102, 103, 201, 181, 131, 99, 94, 7, 68, 250, 132, 21}
+)
+
+// SignatureDataTemplate is the template for the signature data structure.
+type SignatureDataTemplate struct {
+	X0 string `json:"x0"`
+	X1 string `json:"x1"`
+	X2 string `json:"x2"`
+	X3 string `json:"x3"`
+	X4 string `json:"x4"`
+}
+
+// NewSignatureDataTemplate creates a new signature data template with default values.
+func NewSignatureDataTemplate() *SignatureDataTemplate {
+	return &SignatureDataTemplate{
+		X0: "4.2.2",
+		X1: "xhs-pc-web",
+		X2: "Windows",
+		X4: "object",
+	}
+}
+
 // Lookup table for custom base64 encoding
 var Lookup = []byte{
 	'Z', 'm', 's', 'e', 'r', 'b', 'B', 'o', 'H', 'Q', 't', 'N', 'P', '+', 'w', 'O', 'c', 'z', 'a', '/', 'L', 'p', 'n',

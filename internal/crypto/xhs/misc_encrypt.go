@@ -2,6 +2,7 @@ package xhs
 
 import (
 	"crypto/md5"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"hash/crc32"
@@ -10,6 +11,66 @@ import (
 	"strings"
 	"time"
 )
+
+// XorTransformArray performs an XOR transformation on a byte array.
+func XorTransformArray(source []byte) []byte {
+	result := make([]byte, len(source))
+	for i := range source {
+		result[i] = source[i] ^ HexKey[i]
+	}
+	return result
+}
+
+// IntToLeBytes converts an integer to a little-endian byte array.
+func IntToLeBytes(val, length int) []byte {
+	bytes := make([]byte, length)
+	for i := 0; i < length; i++ {
+		bytes[i] = byte(val & 0xFF)
+		val >>= 8
+	}
+	return bytes
+}
+
+// StrToLenPrefixedBytes converts a string to a byte array with a 1-byte length prefix.
+func StrToLenPrefixedBytes(s string) []byte {
+	buf := []byte(s)
+	return append([]byte{byte(len(buf))}, buf...)
+}
+
+// HexStringToBytes converts a hex string to a byte array.
+func HexStringToBytes(hexStr string) ([]byte, error) {
+	return hex.DecodeString(hexStr)
+}
+
+// ProcessHexParameter processes a hex parameter string.
+func ProcessHexParameter(hexStr string, xorKey byte) ([]byte, error) {
+	if len(hexStr) != ExpectedHexLength {
+		return nil, nil // Return nil to indicate an error in a more Go-idiomatic way.
+	}
+
+	byteValues, err := HexStringToBytes(hexStr)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]byte, OutputByteCount)
+	for i := 0; i < OutputByteCount; i++ {
+		result[i] = byteValues[i] ^ xorKey
+	}
+	return result, nil
+}
+
+func Uint32ToLeBytes(n uint32) []byte {
+	b := make([]byte, 4)
+	binary.LittleEndian.PutUint32(b, n)
+	return b
+}
+
+func Uint64ToLeBytes(n uint64) []byte {
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, n)
+	return b
+}
 
 // CustomFieldDecrypt 提供了自定义的字段解密相关功能
 type CustomFieldDecrypt struct{}
@@ -108,7 +169,7 @@ func (c *CookieFieldEncrypt) GetA1AndWebID() (string, string) {
 	if len(g) > 52 {
 		g = g[:52]
 	}
-	
+
 	hasher := md5.New()
 	hasher.Write([]byte(g))
 	webID := hex.EncodeToString(hasher.Sum(nil))

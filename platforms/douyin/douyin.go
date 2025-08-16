@@ -15,6 +15,7 @@ import (
 // DyClient 是抖音平台的客户端
 type DyClient struct {
 	client       *resty.Client
+	imagexClient *resty.Client
 	uploadClient *resty.Client
 }
 
@@ -23,13 +24,17 @@ type DyClient struct {
 func New(cookie string) *DyClient {
 	c := &DyClient{
 		client:       http.NewClient(cookie),
+		imagexClient: http.NewClient(""),
 		uploadClient: http.NewClient(""),
 	}
 	c.client.SetProxy("http://127.0.0.1:8888")
 	c.client.AddRequestMiddleware(headers)
+	c.imagexClient.SetProxy("http://127.0.0.1:8888")
+	c.imagexClient.AddRequestMiddleware(uploadSign)
+	c.imagexClient.AddRequestMiddleware(uploadHeaders)
 	c.uploadClient.SetProxy("http://127.0.0.1:8888")
-	c.uploadClient.AddRequestMiddleware(uploadSign)
-	c.uploadClient.AddRequestMiddleware(uploadHeaders)
+	// c.uploadClient.AddRequestMiddleware(uploadSign)
+	// c.uploadClient.AddRequestMiddleware(uploadHeaders)
 	return c
 }
 

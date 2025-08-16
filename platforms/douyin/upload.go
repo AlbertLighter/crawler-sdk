@@ -138,7 +138,7 @@ func (c *DyClient) applyImageUpload(ctx context.Context, auth *AuthDetails) (*Ap
 	// AWS v4 签名
 	// headers := c.signRequest(ctx, req, auth, "")
 
-	resp, err := c.uploadClient.R().
+	resp, err := c.imagexClient.R().
 		SetResult(&ApplyUploadResponse{}).
 		SetContext(ctx).
 		Get(reqURL)
@@ -148,6 +148,28 @@ func (c *DyClient) applyImageUpload(ctx context.Context, auth *AuthDetails) (*Ap
 	}
 	return resp.Result().(*ApplyUploadResponse), nil
 }
+
+// POST https://tos-d-x-hl.snssdk.com/upload/v1/tos-cn-i-jm8ajry58r/ebeb8e3b40ba4b448bddee77b52d0179 HTTP/1.1
+// Host: tos-d-x-hl.snssdk.com
+// Connection: keep-alive
+// Content-Length: 16368
+// sec-ch-ua-platform: "Windows"
+// Authorization: SpaceKey/jm8ajry58r/1/:version:v2:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTUzNDQwNDgsInNpZ25hdHVyZUluZm8iOnsiYWNjZXNzS2V5IjoiZmFrZV9hY2Nlc3Nfa2V5IiwiYnVja2V0IjoidG9zLWNuLWktam04YWpyeTU4ciIsImV4cGlyZSI6MTc1NTM0NDA0OCwiZmlsZUluZm9zIjpbeyJvaWRLZXkiOiJlYmViOGUzYjQwYmE0YjQ0OGJkZGVlNzdiNTJkMDE3OSIsImZpbGVUeXBlIjoiMSJ9XSwiZXh0cmEiOnsiYWNjb3VudF9wcm9kdWN0IjoiaW1hZ2V4IiwiYmxvY2tfbW9kZSI6IiIsImNvbnRlbnRfdHlwZV9ibG9jayI6IntcIm1pbWVfcGN0XCI6MCxcIm1vZGVcIjowLFwibWltZV9saXN0XCI6bnVsbCxcImNvbmZsaWN0X2Jsb2NrXCI6ZmFsc2V9IiwiZW5jcnlwdF9hbGdvIjoiIiwiZW5jcnlwdF9rZXkiOiIiLCJzcGFjZSI6ImptOGFqcnk1OHIiLCJ0b3NfbWV0YSI6IntcIlVTRVJfSURcIjpcIjE4NzMxNTYwMjUwOTEyNTZcIn0ifX19.YxVzRhg_E4LlJAcE_Hez7-RuC7iLk5Tw_RrReAKbTdw
+// sec-ch-ua: "Not;A=Brand";v="99", "Microsoft Edge";v="139", "Chromium";v="139"
+// Content-CRC32: fc5f0689
+// sec-ch-ua-mobile: ?0
+// User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0
+// X-Storage-U:
+// Content-Type: application/octet-stream
+// Content-Disposition: attachment; filename="undefined"
+// Accept: */*
+// Origin: https://creator.douyin.com
+// Sec-Fetch-Site: cross-site
+// Sec-Fetch-Mode: cors
+// Sec-Fetch-Dest: empty
+// Referer: https://creator.douyin.com/
+// Accept-Encoding: gzip, deflate, br, zstd
+// Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6
 
 // uploadFileToTOS 上传文件到TOS
 func (c *DyClient) uploadFileToTOS(ctx context.Context, applyResp *ApplyUploadResponse, filePath string) error {
@@ -160,12 +182,13 @@ func (c *DyClient) uploadFileToTOS(ctx context.Context, applyResp *ApplyUploadRe
 	crc := crc32.Checksum(fileBytes, crc32q)
 	crc32Str := fmt.Sprintf("%x", crc)
 
-	uploadURL := "https://" + applyResp.Result.UploadAddress.UploadHosts[0] + "/" + applyResp.Result.UploadAddress.StoreInfos[0].StoreUri
+	uploadURL := "https://" + applyResp.Result.UploadAddress.UploadHosts[0] + "/upload/v1/" + applyResp.Result.UploadAddress.StoreInfos[0].StoreUri
 
-	resp, err := c.client.R().
+	resp, err := c.uploadClient.R().
 		SetHeaders(map[string]string{
 			"Content-CRC32": crc32Str,
 			"Content-Type":  "application/octet-stream",
+			"Authorization": applyResp.Result.UploadAddress.StoreInfos[0].Auth,
 		}).
 		SetBody(fileBytes).
 		Post(uploadURL)
@@ -195,10 +218,11 @@ func (c *DyClient) commitImageUpload(ctx context.Context, auth *AuthDetails, app
 	// AWS v4 签名
 	headers := c.signRequest(ctx, req, auth, string(payloadBytes))
 
-	resp, err := c.client.R().
+	resp, err := c.imagexClient.R().
 		SetHeaders(headers).
 		SetBody(payloadBytes).
 		SetResult(&CommitUploadResponse{}).
+		SetContext(ctx).
 		Post(reqURL)
 
 	if err != nil {

@@ -5,11 +5,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"net/http"
 	"net/url"
 	"sort"
 	"strings"
 	"time"
+
+	"resty.dev/v3"
 )
 
 // Constants for AWS v4 Signing
@@ -38,13 +39,13 @@ func NewSigner(accessKey, secretKey, sessionToken, region, service string) *Sign
 		AccessKeyID:     accessKey,
 		SecretAccessKey: secretKey,
 		SessionToken:    sessionToken,
-		Region:          region,
-		Service:         service,
+		Region:          region,  //cn-north-1
+		Service:         service, //imagex
 	}
 }
 
-// Sign calculates and adds the AWS v4 authorization headers to the given http.Request.
-func (s *Signer) Sign(req *http.Request, body []byte, signTime time.Time) {
+// Sign calculates and adds the AWS v4 authorization headers to the given resty.Request.
+func (s *Signer) Sign(req *resty.Request, body []byte, signTime time.Time) {
 	// 1. Prepare timestamps
 	amzDate := signTime.UTC().Format("20060102T150405Z")
 
@@ -53,7 +54,7 @@ func (s *Signer) Sign(req *http.Request, body []byte, signTime time.Time) {
 	// 2. Calculate payload hash
 
 	payloadHash := hex.EncodeToString(hashSHA256(body))
-	req.Header.Set(awsContentSha256Header, payloadHash)
+	// req.Header.Set(awsContentSha256Header, payloadHash)
 	req.Header.Set(awsDateHeader, amzDate)
 	if s.SessionToken != "" {
 		req.Header.Set(awsTokenHeader, s.SessionToken)
@@ -85,16 +86,18 @@ func (s *Signer) Sign(req *http.Request, body []byte, signTime time.Time) {
 }
 
 // createCanonicalRequest creates the canonical request string.
-func (s *Signer) createCanonicalRequest(req *http.Request, payloadHash string) (string, string) {
+func (s *Signer) createCanonicalRequest(req *resty.Request, payloadHash string) (string, string) {
 	// Canonical URI
-	canonicalURI := req.URL.Path
+	u, _ := url.Parse(req.URL)
+	canonicalURI := u.Path
 	if canonicalURI == "" {
 		canonicalURI = "/"
 	}
 
 	// Canonical Query String
 
-	canonicalQuery := s.createCanonicalQuery(req.URL.Query())
+	canonicalQuery := s.createCanonicalQuery(u.Query())
+	// canonicalQuery := s.createCanonicalQuery(req.URL.Query())
 
 	// Canonical Headers & Signed Headers
 
@@ -130,7 +133,7 @@ func (s *Signer) createCanonicalQuery(queryParams url.Values) string {
 }
 
 // createCanonicalHeaders creates the canonical headers string and the signed headers list.
-func (s *Signer) createCanonicalHeaders(req *http.Request) (string, string) {
+func (s *Signer) createCanonicalHeaders(req *resty.Request) (string, string) {
 	var headers [][2]string
 	for key, values := range req.Header {
 		lowerKey := strings.ToLower(key)

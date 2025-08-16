@@ -133,14 +133,17 @@ func (c *DyClient) getUploadAuth(ctx context.Context) (*AuthDetails, error) {
 // applyImageUpload 申请图片上传
 func (c *DyClient) applyImageUpload(ctx context.Context, auth *AuthDetails) (*ApplyUploadResponse, error) {
 	reqURL := fmt.Sprintf("%s/?Action=ApplyImageUpload&Version=2018-08-01&ServiceId=jm8ajry58r", imagexURL)
-	req, _ := http.NewRequest("GET", reqURL, nil)
+	// req, _ := http.NewRequest("GET", reqURL, nil)
 
 	// AWS v4 签名
-	headers := c.signRequest(ctx, req, auth, "")
+	// headers := c.signRequest(ctx, req, auth, "")
 
-	resp, err := c.client.R().
-		SetHeaders(headers).
+	resp, err := c.uploadClient.R().
+		SetHeaders(map[string]string{
+			"x-amz-security-token": auth.SessionToken,
+		}).
 		SetResult(&ApplyUploadResponse{}).
+		SetContext(ctx).
 		Get(reqURL)
 
 	if err != nil {
@@ -220,6 +223,8 @@ func (c *DyClient) PublishImage(ctx context.Context, filePath, title, descriptio
 	if err != nil {
 		return nil, fmt.Errorf("step 1: get upload auth failed: %w", err)
 	}
+
+	ctx = context.WithValue(ctx, "auth", auth)
 
 	// 2. 申请上传
 	applyResp, err := c.applyImageUpload(ctx, auth)

@@ -5,8 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
-	"net/http"
+	"io"
 	"net/url"
 	"sort"
 	"strings"
@@ -27,13 +26,11 @@ import (
 
 // // Signer holds the credentials and configuration for signing requests.
 // // It's designed to be compatible with AWS Signature Version 4.
-// type Signer struct {
-// 	AccessKeyID     string
-// 	SecretAccessKey string
-// 	SessionToken    string
-// 	Region          string
-// 	Service         string
-// }
+type Credentials struct {
+	AccessKeyID     string
+	SecretAccessKey string
+	SessionToken    string
+}
 
 // // NewSigner creates a new Signer.
 // func NewSigner(accessKey, secretKey, sessionToken, region, service string) *Signer {
@@ -66,7 +63,7 @@ type signerConst struct {
 }
 
 // NewSigner creates a new Signer.
-func NewSigner(req *http.Request, serviceName, region string, isVolcengine bool) *Signer {
+func NewSigner(req *resty.Request, serviceName, region string, isVolcengine bool) *Signer {
 	s := &Signer{
 		Request:             req,
 		ServiceName:         serviceName,
@@ -96,38 +93,37 @@ func NewSigner(req *http.Request, serviceName, region string, isVolcengine bool)
 }
 
 // AddAuthorization adds the Authorization header to the request.
-func (s *Signer) AddAuthorization(credentials map[string]string, date time.Time) {
+func (s *Signer) AddAuthorization(credentials Credentials, date time.Time) {
 	isoDate := s.iso8601(date)
+	// isoDate = "20250816T095224Z"
 	s.addHeaders(credentials, isoDate)
 	authHeader := s.authorization(credentials, isoDate)
 	s.Request.Header.Set("Authorization", authHeader)
 }
 
-func (s *Signer) addHeaders(credentials map[string]string, isoDate string) {
+func (s *Signer) addHeaders(credentials Credentials, isoDate string) {
 	s.Request.Header.Set(s.Constant.DateHeader, isoDate)
-	if sessionToken, ok := credentials["sessionToken"]; ok {
-		s.Request.Header.Set(s.Constant.TokenHeader, sessionToken)
-	}
-	if s.Request.Body != nil {
-		bodyBytes, _ := ioutil.ReadAll(s.Request.Body)
-		s.Request.Header.Set(s.Constant.ContentSha256Header, s.hexEncodedHash(string(bodyBytes)))
-	}
+	s.Request.Header.Set(s.Constant.TokenHeader, credentials.SessionToken)
+	// if s.Request.Body != nil {
+	// 	bodyBytes, _ := ioutil.ReadAll(s.Request.Body)
+	// 	s.Request.Header.Set(s.Constant.ContentSha256Header, s.hexEncodedHash(string(bodyBytes)))
+	// }
 }
 
-func (s *Signer) authorization(credentials map[string]string, isoDate string) string {
+func (s *Signer) authorization(credentials Credentials, isoDate string) string {
 	credentialString := s.credentialString(isoDate)
 	signedHeaders := s.signedHeaders()
 	signature := s.signature(credentials, isoDate)
 
 	return fmt.Sprintf("%s Credential=%s/%s, SignedHeaders=%s, Signature=%s",
 		s.Constant.Algorithm,
-		credentials["accessKeyId"],
+		credentials.AccessKeyID,
 		credentialString,
 		signedHeaders,
 		signature)
 }
 
-func (s *Signer) signature(credentials map[string]string, isoDate string) string {
+func (s *Signer) signature(credentials Credentials, isoDate string) string {
 	signingKey := s.getSigningKey(credentials, isoDate[0:8], s.Region, s.ServiceName)
 	stringToSign := s.stringToSign(isoDate)
 
@@ -146,19 +142,23 @@ func (s *Signer) stringToSign(isoDate string) string {
 }
 
 func (s *Signer) canonicalString() string {
-	return strings.Join([]string{
+	u, _ := url.Parse(s.Request.URL)
+	str := strings.Join([]string{
 		s.Request.Method,
-		s.Request.URL.Path,
+		u.Path,
 		s.canonicalQueryString(),
-		s.canonicalHeaders(),
+		s.canonicalHeaders() + "\n",
 		s.signedHeaders(),
 		s.hexEncodedBodyHash(),
 	}, "\n")
+	fmt.Println(str)
+	return str
 }
 
 func (s *Signer) canonicalQueryString() string {
 	var keys []string
-	query := s.Request.URL.Query()
+	u, _ := url.Parse(s.Request.URL)
+	query := u.Query()
 	for k := range query {
 		keys = append(keys, k)
 	}
@@ -219,7 +219,7 @@ func (s *Signer) hexEncodedBodyHash() string {
 	if s.Request.Body == nil {
 		return s.hexEncodedHash("")
 	}
-	bodyBytes, _ := ioutil.ReadAll(s.Request.Body)
+	bodyBytes, _ := io.ReadAll(s.Request.Body.(io.Reader))
 	return s.hexEncodedHash(string(bodyBytes))
 }
 
@@ -240,8 +240,8 @@ func (s *Signer) iso8601(date time.Time) string {
 	return date.UTC().Format("20060102T150405Z")
 }
 
-func (s *Signer) getSigningKey(credentials map[string]string, date, region, service string) []byte {
-	kDate := hmacSHA256([]byte(s.Constant.KDatePrefix+credentials["secretAccessKey"]), []byte(date))
+func (s *Signer) getSigningKey(credentials Credentials, date, region, service string) []byte {
+	kDate := hmacSHA256([]byte(s.Constant.KDatePrefix+credentials.SecretAccessKey), []byte(date))
 	kRegion := hmacSHA256(kDate, []byte(region))
 	kService := hmacSHA256(kRegion, []byte(service))
 	kSigning := hmacSHA256(kService, []byte(s.Constant.V4Identifier))
@@ -258,20 +258,20 @@ func hmacSHA256(key, data []byte) []byte {
 	return mac.Sum(nil)
 }
 
-func main() {
-	// Example usage
-	req, _ := http.NewRequest("GET", "http://example.amazonaws.com/?Param2=value2&Param1=value1", nil)
-	req.Header.Set("X-Amz-Date", "20150830T123600Z")
-	req.Header.Set("Host", "example.amazonaws.com")
+// func main() {
+// 	// Example usage
+// 	req, _ := http.NewRequest("GET", "http://example.amazonaws.com/?Param2=value2&Param1=value1", nil)
+// 	req.Header.Set("X-Amz-Date", "20150830T123600Z")
+// 	req.Header.Set("Host", "example.amazonaws.com")
 
-	credentials := map[string]string{
-		"accessKeyId":     "AKIDEXAMPLE",
-		"secretAccessKey": "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY",
-	}
+// 	credentials := credentials{
+// 		AccessKeyID:     "AKIDEXAMPLE",
+// 		SecretAccessKey: "wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY",
+// 	}
 
-	signer := NewSigner(req, "service", "us-east-1", false)
-	date, _ := time.Parse("20060102T150405Z", "20150830T123600Z")
-	signer.AddAuthorization(credentials, date)
+// 	signer := NewSigner(req, "service", "us-east-1", false)
+// 	date, _ := time.Parse("20060102T150405Z", "20150830T123600Z")
+// 	signer.AddAuthorization(credentials, date)
 
-	fmt.Println(req.Header.Get("Authorization"))
-}
+// 	fmt.Println(req.Header.Get("Authorization"))
+// }

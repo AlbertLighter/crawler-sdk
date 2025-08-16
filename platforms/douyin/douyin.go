@@ -23,13 +23,13 @@ type DyClient struct {
 func New(cookie string) *DyClient {
 	c := &DyClient{
 		client:       http.NewClient(cookie),
-		uploadClient: http.NewClient(cookie),
+		uploadClient: http.NewClient(""),
 	}
 	c.client.SetProxy("http://127.0.0.1:8888")
 	c.client.AddRequestMiddleware(headers)
 	c.uploadClient.SetProxy("http://127.0.0.1:8888")
-	c.uploadClient.AddRequestMiddleware(uploadHeaders)
 	c.uploadClient.AddRequestMiddleware(uploadSign)
+	c.uploadClient.AddRequestMiddleware(uploadHeaders)
 	return c
 }
 
@@ -79,7 +79,12 @@ func uploadHeaders(c *resty.Client, req *resty.Request) error {
 func uploadSign(c *resty.Client, req *resty.Request) error {
 	fmt.Println("uploadSign")
 	auth := req.Context().Value("auth").(*AuthDetails)
-	signer := dy.NewSigner(auth.AccessKeyID, auth.SecretAccessKey, auth.SessionToken, "cn-north-1", "imagex")
-	signer.Sign(req, []byte{}, time.Now())
+	signer := dy.NewSigner(req, "imagex", "cn-north-1", false)
+	credentials := dy.Credentials{
+		AccessKeyID:     auth.AccessKeyID,
+		SecretAccessKey: auth.SecretAccessKey,
+		SessionToken:    auth.SessionToken,
+	}
+	signer.AddAuthorization(credentials, time.Now())
 	return nil
 }

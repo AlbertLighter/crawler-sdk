@@ -15,6 +15,6 @@ func NewClient(cookie string) *resty.Client {
 	if cookie != "" {
 		client.SetHeader("Cookie", cookie)
 	}
-
+	client.SetProxy("http://127.0.0.1:8888")
 	return client
 }

@@ -27,12 +27,9 @@ func New(cookie string) *DyClient {
 		imagexClient: http.NewClient(""),
 		uploadClient: http.NewClient(""),
 	}
-	c.client.SetProxy("http://127.0.0.1:8888")
 	c.client.AddRequestMiddleware(headers)
-	c.imagexClient.SetProxy("http://127.0.0.1:8888")
 	c.imagexClient.AddRequestMiddleware(uploadSign)
 	c.imagexClient.AddRequestMiddleware(uploadHeaders)
-	c.uploadClient.SetProxy("http://127.0.0.1:8888")
 	// c.uploadClient.AddRequestMiddleware(uploadSign)
 	// c.uploadClient.AddRequestMiddleware(uploadHeaders)
 	return c

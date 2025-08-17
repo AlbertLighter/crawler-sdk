@@ -30,8 +30,6 @@ func New(cookie string) *XhsClient {
 	c.client.AddRequestMiddleware(SignXSC)
 	c.client.AddRequestMiddleware(SignTraceID)
 	c.UploadClient.AddRequestMiddleware(QSign)
-	c.client.SetProxy("http://127.0.0.1:8888")
-	c.UploadClient.SetProxy("http://127.0.0.1:8888")
 	return c
 }
 

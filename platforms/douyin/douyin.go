@@ -1,7 +1,7 @@
 package douyin
 
 import (
-	"crawler-sdk/internal/crypto/dy"
+	dy "crawler-sdk/internal/crypto/dy/auth"
 	"crawler-sdk/pkg/http"
 	"fmt"
 	"time"

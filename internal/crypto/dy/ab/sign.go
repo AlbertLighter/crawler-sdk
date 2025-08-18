@@ -3,6 +3,7 @@ package ab
 import (
 	"crypto/rc4"
 	"encoding/hex"
+	"fmt"
 	"math"
 	"math/rand"
 	"strings"
@@ -217,6 +218,28 @@ func (s *Signer) generateRc4BbStr(urlSearchParams, userAgent, windowEnvStr, suff
 		bb = append(bb, byte(b[val]))
 	}
 
+	// var aa []int64
+	// for _, val := range []int{18, 20, 52, 26, 30, 34, 58, 38, 40, 53, 42, 21, 27, 54, 55, 31, 35, 57, 39, 41, 43, 22, 28, 32, 60, 36, 23, 29, 33, 37, 44, 45, 59, 46, 47, 48, 49, 50, 24, 25, 65, 66, 70, 71} {
+	// 	aa = append(aa, (b[val]))
+	// }
+	// fmt.Println(aa)
+	// // 创建一个rune切片
+	// runes := make([]rune, len(aa))
+	// // 将int类型的码点值赋给rune切片
+	// for i, code := range aa {
+	// 	runes[i] = rune(code)
+	// }
+	// // 打印16进制字符串
+	// hexStr := ""
+	// for i := 0; i < len(runes); i++ {
+	// 	hexStr += fmt.Sprintf("%02x", runes[i])
+	// }
+	// fmt.Println(hexStr)
+	// fmt.Println(len(runes))
+
+
+
+
 	bb = append(bb, windowEnvList...)
 	bb = append(bb, byte(b[72]))
 
@@ -248,6 +271,12 @@ func (s *Signer) Sign(urlSearchParams, userAgent string, arguments []int) (strin
 		return "", err
 	}
 	resultStr := s.generateRandomStr() + rc4BbStr
+	// 打印16进制字符串
+	hexStr := ""
+	for i := 0; i < len(resultStr); i++ {
+		hexStr += fmt.Sprintf("%02x", resultStr[i])
+	}
+	fmt.Println(hexStr)
 	return resultEncrypt(resultStr, "s4") + "=", nil
 }
 

@@ -398,6 +398,9 @@ function generate_rc4_bb_str(url_search_params, user_agent, window_env_str, suff
         b[35], b[57], b[39], b[41], b[43], b[22], b[28], b[32], b[60], b[36], b[23], b[29], b[33], b[37], b[44], b[45],
         b[59], b[46], b[47], b[48], b[49], b[50], b[24], b[25], b[65], b[66], b[70], b[71]
     ]
+    // 打印16进制字符串
+    // console.log(bb.map(x => x.toString(16).padStart(2, '0')).join(''))
+    // console.log(bb.length)
     bb = bb.concat(window_env_list).concat(b[72])
     return rc4_encrypt(String.fromCharCode.apply(null, bb), String.fromCharCode.apply(null, [121]));
 }
@@ -422,6 +425,8 @@ function sign(url_search_params, user_agent, arguments) {
         "cus",
         arguments
     );
+    // 打印16进制字符串
+    // console.log(Array.from(result_str, c => c.charCodeAt(0).toString(16).padStart(2, '0')).join(''))
     return result_encrypt(result_str, "s4") + "=";
 }
 

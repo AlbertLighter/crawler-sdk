@@ -122,7 +122,8 @@ func (s *Signer) generateRc4BbStr(urlSearchParams, userAgent, windowEnvStr, suff
 	h.Write(sum2)
 	cus := h.Sum(nil)
 
-	key := []byte{byte(0.00390625 * 256), 1, byte(arguments[2])}
+	key := []byte{byte(0), 1, byte(arguments[2])}
+	// key := []byte{byte(0.00390625), 1, byte(arguments[2])}
 	rc4Encrypted, err := rc4Encrypt([]byte(userAgent), key)
 	if err != nil {
 		return "", err

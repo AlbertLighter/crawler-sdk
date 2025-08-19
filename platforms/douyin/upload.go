@@ -256,8 +256,150 @@ func (c *DyClient) commitImageUpload(ctx context.Context, auth *AuthDetails, app
 	return commitResp, nil
 }
 
+// CreatePostRequest is the request body for creating a post
+type CreatePostRequest struct {
+	Item Item `json:"item"`
+}
+
+// Item represents the item details in the post
+type Item struct {
+	Common  Common  `json:"common"`
+	Cover   Cover   `json:"cover"`
+	Anchor  Anchor  `json:"anchor"`
+	Declare Declare `json:"declare"`
+}
+
+// Common contains common details of the post
+type Common struct {
+	Text           string  `json:"text"`
+	TextExtra      string  `json:"text_extra"`
+	Activity       string  `json:"activity"`
+	Challenges     string  `json:"challenges"`
+	HashtagSource  string  `json:"hashtag_source"`
+	Mentions       string  `json:"mentions"`
+	VisibilityType int     `json:"visibility_type"`
+	Download       int     `json:"download"`
+	Timing         int     `json:"timing"`
+	MediaType      int     `json:"media_type"`
+	Images         []Image `json:"images"`
+	CreationID     string  `json:"creation_id"`
+}
+
+// Image represents an image in the post
+type Image struct {
+	URI    string `json:"uri"`
+	Width  int    `json:"width"`
+	Height int    `json:"height"`
+}
+
+// Cover represents the cover of the post
+type Cover struct {
+	Poster string `json:"poster"`
+}
+
+// Anchor is an empty struct for now
+type Anchor struct{}
+
+// Declare contains declaration info
+type Declare struct {
+	UserDeclareInfo string `json:"user_declare_info"`
+}
+
+// CreatePostResponse is the response from creating a post
+type CreatePostResponse struct {
+	Extra struct {
+		Logid string `json:"logid"`
+		Now   int64  `json:"now"`
+	} `json:"extra"`
+	ItemID     string `json:"item_id"`
+	StatusCode int    `json:"status_code"`
+}
+
+// createPost creates a new post (aweme)
+func (c *DyClient) createPost(ctx context.Context, commitResp *CommitUploadResponse, title string) (*CreatePostResponse, error) {
+	// TODO: msToken and a_bogus need to be generated dynamically
+	imageInfo := commitResp.Result.PluginResult[0]
+
+	// Generate a creation_id, it seems to be a timestamp-based unique id.
+	creationID := fmt.Sprintf("gemini%d", time.Now().UnixNano()/1e6)
+
+	textExtra := fmt.Sprintf(`[{"start":0,"end":%d,"hashtag_id":0,"hashtag_name":"","type":7}]`, len(title))
+
+	payload := CreatePostRequest{
+		Item: Item{
+			Common: Common{
+				Text:           title,
+				TextExtra:      textExtra,
+				Activity:       "[]",
+				Challenges:     "[]",
+				HashtagSource:  "",
+				Mentions:       "[]",
+				VisibilityType: 0,
+				Download:       1,
+				Timing:         -1,
+				MediaType:      2, // 2 for images
+				Images: []Image{
+					{
+						URI:    imageInfo.ImageUri,
+						Width:  imageInfo.ImageWidth,
+						Height: imageInfo.ImageHeight,
+					},
+				},
+				CreationID: creationID,
+			},
+			Cover: Cover{
+				Poster: imageInfo.ImageUri,
+			},
+			Anchor:  Anchor{},
+			Declare: Declare{
+				UserDeclareInfo: "{}",
+			},
+		},
+	}
+
+	// Query params from the captured request
+	queryParams := map[string]string{
+		"read_aid":         "2906",
+		"cookie_enabled":   "true",
+		"screen_width":     "2048",
+		"screen_height":    "1152",
+		"browser_language": "zh-CN",
+		"browser_platform": "Win32",
+		"browser_name":     "Mozilla",
+		"browser_version":  "5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0",
+		"browser_online":   "true",
+		"timezone_name":    "Asia/Shanghai",
+		"aid":              "1128",
+		"support_h265":     "1",
+		// "msToken": "...", // TODO: Needs to be generated dynamically
+		// "a_bogus": "...", // TODO: Needs to be generated dynamically
+	}
+
+	resp, err := c.client.R().
+		SetContext(ctx).
+		SetResult(&CreatePostResponse{}).
+		SetBody(payload).
+		SetHeaders(map[string]string{
+			"Referer":      "https://creator.douyin.com/creator-micro/content/post/image?default-tab=3&enter_from=publish_page&media_type=image&type=new",
+			"Content-Type": "application/json",
+		}).
+		SetQueryParams(queryParams).
+		Post(fmt.Sprintf("%s/web/api/media/aweme/create_v2/", douyinCreatorURL))
+
+	if err != nil {
+		return nil, err
+	}
+
+	createResp := resp.Result().(*CreatePostResponse)
+	if createResp.StatusCode != 0 {
+		return nil, fmt.Errorf("create post failed, status code: %d, item_id: %s", createResp.StatusCode, createResp.ItemID)
+	}
+
+	return createResp, nil
+}
+
 // PublishImage 发布图文
-func (c *DyClient) PublishImage(ctx context.Context, filePath, title, description string) (*CommitUploadResponse, error) {
+func (c *DyClient) PublishImage(ctx context.Context, filePath, title, description string) (*CreatePostResponse, error) {
 	// 1. 获取上传凭证
 	auth, err := c.getUploadAuth(ctx)
 	if err != nil {
@@ -284,16 +426,15 @@ func (c *DyClient) PublishImage(ctx context.Context, filePath, title, descriptio
 		return nil, fmt.Errorf("step 4: commit image upload failed: %w", err)
 	}
 
-	// 5. 发布作品 (此步骤需要分析发布接口)
-	// imageUri := commitResp.Result.PluginResult[0].ImageUri
-	// err = c.createPost(imageUri, title, description)
-	// if err != nil {
-	// 	 return nil, fmt.Errorf("step 5: create post failed: %w", err)
-	// }
-	fmt.Println("Image uploaded successfully! URI:", commitResp.Result.PluginResult[0].ImageUri)
-	fmt.Println("Next step is to call the actual publish API which is not included in the log.")
+	// 5. 发布作品
+	createResp, err := c.createPost(ctx, commitResp, title)
+	if err != nil {
+		return nil, fmt.Errorf("step 5: create post failed: %w", err)
+	}
 
-	return commitResp, nil
+	fmt.Println("Image published successfully! ItemID:", createResp.ItemID)
+
+	return createResp, nil
 }
 
 // signRequest 为ImageX API请求进行AWS v4签名 (简化版)

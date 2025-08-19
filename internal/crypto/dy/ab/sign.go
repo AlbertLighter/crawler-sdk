@@ -4,7 +4,6 @@ import (
 	"crypto/rc4"
 	"encoding/hex"
 	"fmt"
-	"math"
 	"math/rand"
 	"strings"
 	"time"
@@ -54,41 +53,65 @@ func rc4Encrypt(plaintext, key []byte) ([]byte, error) {
 	return dst, nil
 }
 
-func resultEncrypt(longStr string, num string) string {
-	sMap := map[string]interface{}{
-		"0":   16515072,
-		"1":   258048,
-		"2":   4032,
-		"str": sObj[num],
+// ResultEncrypt 使用自定义字母表对字符串进行 Base64 编码
+// 这个实现逻辑上与 Python 版本完全一致
+func ResultEncrypt(longStr string, numKey string) (string, error) {
+	// 1. 根据 key 获取字母表
+	alphabet, ok := sObj[numKey]
+	if !ok {
+		return "", fmt.Errorf("invalid numKey: %s", numKey)
 	}
 
+	// 2. 将输入字符串转换为字节切片
+	// Go 的 string 内部是 UTF-8，直接转换为 []byte 可以逐字节处理，
+	// 这与 Python 的 .encode('latin-1') 在处理 ASCII 和单字节字符时行为一致。
+	longStrBytes := []byte(longStr)
+	dataLen := len(longStrBytes)
+
+	// 3. 使用 strings.Builder 高效地构建结果字符串
+	// 预分配容量可以进一步提升性能
 	var result strings.Builder
-	lound := 0
-	longInt := getLongInt(lound, longStr)
+	result.Grow((dataLen/3 + 1) * 4)
 
-	for i := 0; i < len(longStr)/3*4; i++ {
-		if math.Floor(float64(i)/4) != float64(lound) {
-			lound++
-			longInt = getLongInt(lound, longStr)
+	// 4. 以 3 字节为步长遍历数据，这是 Base64 的核心逻辑
+	for i := 0; i < dataLen; i += 3 {
+		// 定义3个字节变量，并处理数据末尾不足3字节的情况
+		// 缺失的字节默认为0，这在位运算中是正确的处理方式
+		b1, b2, b3 := longStrBytes[i], byte(0), byte(0)
+
+		if i+1 < dataLen {
+			b2 = longStrBytes[i+1]
 		}
-		key := i % 4
-		var tempInt int
-		switch key {
-		case 0:
-			tempInt = (longInt & sMap["0"].(int)) >> 18
-			result.WriteByte(sMap["str"].(string)[tempInt])
-		case 1:
-			tempInt = (longInt & sMap["1"].(int)) >> 12
-			result.WriteByte(sMap["str"].(string)[tempInt])
-		case 2:
-			tempInt = (longInt & sMap["2"].(int)) >> 6
-			result.WriteByte(sMap["str"].(string)[tempInt])
-		case 3:
-			tempInt = longInt & 63
-			result.WriteByte(sMap["str"].(string)[tempInt])
+		if i+2 < dataLen {
+			b3 = longStrBytes[i+2]
+		}
+
+		// 将3个8位字节（24位）合并成一个 uint32 整数
+		// 使用 uint32 确保位移操作不会溢出
+		longInt := uint32(b1)<<16 | uint32(b2)<<8 | uint32(b3)
+
+		// 将24位整数拆分为4个6位的索引值
+		idx1 := (longInt >> 18) & 0x3F
+		idx2 := (longInt >> 12) & 0x3F
+		idx3 := (longInt >> 6) & 0x3F
+		idx4 := longInt & 0x3F
+
+		// 根据索引从字母表中查找字符并写入结果
+		result.WriteByte(alphabet[idx1])
+		result.WriteByte(alphabet[idx2])
+
+		// 5. 正确处理补位逻辑
+		// 如果原始数据块至少有2个字节，才写入第3个编码字符
+		if i+1 < dataLen {
+			result.WriteByte(alphabet[idx3])
+		}
+		// 如果原始数据块有3个字节，才写入第4个编码字符
+		if i+2 < dataLen {
+			result.WriteByte(alphabet[idx4])
 		}
 	}
-	return result.String()
+
+	return result.String(), nil
 }
 
 func getLongInt(round int, longStr string) int {
@@ -129,7 +152,10 @@ func (s *Signer) generateRc4BbStr(urlSearchParams, userAgent, windowEnvStr, suff
 	if err != nil {
 		return "", err
 	}
-	uaEncrypted := resultEncrypt(string(rc4Encrypted), "s3")
+	uaEncrypted, err := ResultEncrypt(string(rc4Encrypted), "s3")
+	if err != nil {
+		return "", err
+	}
 	h.Reset()
 	h.Write([]byte(uaEncrypted))
 	ua := h.Sum(nil)
@@ -237,9 +263,6 @@ func (s *Signer) generateRc4BbStr(urlSearchParams, userAgent, windowEnvStr, suff
 	// fmt.Println(hexStr)
 	// fmt.Println(len(runes))
 
-
-
-
 	bb = append(bb, windowEnvList...)
 	bb = append(bb, byte(b[72]))
 
@@ -277,7 +300,11 @@ func (s *Signer) Sign(urlSearchParams, userAgent string, arguments []int) (strin
 		hexStr += fmt.Sprintf("%02x", resultStr[i])
 	}
 	fmt.Println(hexStr)
-	return resultEncrypt(resultStr, "s4") + "=", nil
+	encryptedStr, err := ResultEncrypt(resultStr, "s4")
+	if err != nil {
+		return "", err
+	}
+	return encryptedStr + "=", nil
 }
 
 func (s *Signer) SignDetail(params, userAgent string) (string, error) {

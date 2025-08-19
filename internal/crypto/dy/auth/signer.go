@@ -1,4 +1,4 @@
-package dy
+package auth
 
 import (
 	"crypto/hmac"

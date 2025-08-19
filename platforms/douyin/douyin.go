@@ -1,8 +1,10 @@
 package douyin
 
 import (
-	dy "crawler-sdk/internal/crypto/dy/auth"
+	"crawler-sdk/internal/crypto/dy/ab"
+	"crawler-sdk/internal/crypto/dy/auth"
 	"crawler-sdk/pkg/http"
+
 	"fmt"
 	"time"
 
@@ -28,6 +30,7 @@ func New(cookie string) *DyClient {
 		uploadClient: http.NewClient(""),
 	}
 	c.client.AddRequestMiddleware(headers)
+	c.client.AddRequestMiddleware(absign)
 	c.imagexClient.AddRequestMiddleware(uploadSign)
 	c.imagexClient.AddRequestMiddleware(uploadHeaders)
 	// c.uploadClient.AddRequestMiddleware(uploadSign)
@@ -35,12 +38,14 @@ func New(cookie string) *DyClient {
 	return c
 }
 
-// GetVideos 实现了获取视频的逻辑
-func (d *DyClient) GetVideos(query string) ([]string, error) {
-	// fmt.Printf("Getting user [%s] from Douyin...\n", query)
-	// 在这里实现具体的视频获取逻辑
-	// 示例: d.client.R().Get(...)
-	return []string{"douyin_video_1.mp4", "douyin_video_2.mp4"}, nil
+func absign(c *resty.Client, req *resty.Request) error {
+	fmt.Println("a_bogus")
+	sign, err := ab.SignDetail("", req.Header.Get("User-Agent"))
+	if err != nil {
+		return err
+	}
+	req.SetQueryParam("a_bogus", sign)
+	return nil
 }
 
 func headers(c *resty.Client, req *resty.Request) error {
@@ -80,12 +85,12 @@ func uploadHeaders(c *resty.Client, req *resty.Request) error {
 
 func uploadSign(c *resty.Client, req *resty.Request) error {
 	fmt.Println("uploadSign")
-	auth := req.Context().Value("auth").(*AuthDetails)
-	signer := dy.NewSigner(req, "imagex", "cn-north-1", false)
-	credentials := dy.Credentials{
-		AccessKeyID:     auth.AccessKeyID,
-		SecretAccessKey: auth.SecretAccessKey,
-		SessionToken:    auth.SessionToken,
+	a := req.Context().Value("auth").(*AuthDetails)
+	signer := auth.NewSigner(req, "imagex", "cn-north-1", false)
+	credentials := auth.Credentials{
+		AccessKeyID:     a.AccessKeyID,
+		SecretAccessKey: a.SecretAccessKey,
+		SessionToken:    a.SessionToken,
 	}
 	signer.AddAuthorization(credentials, time.Now())
 	return nil

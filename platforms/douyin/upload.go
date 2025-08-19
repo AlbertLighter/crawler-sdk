@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"hash/crc32"
 	"net/http"
-	"net/url"
 	"os"
 	"time"
 )
@@ -99,18 +98,38 @@ type PluginResult struct {
 // getUploadAuth 获取上传凭证
 func (c *DyClient) getUploadAuth(ctx context.Context) (*AuthDetails, error) {
 	// TODO: msToken 和 a_bogus 参数需要动态生成
-	params := url.Values{}
-	params.Set("aid", "1128")
-	params.Set("support_h265", "1")
-	params.Set("msToken", "E-qrN5_3s_GdJMz0_nDQm3nwc-Y4lyv0AAZPLCxZkofS0bz-I7dnsoY4_kVfOvQ5mvIHR6yYv6fJqx9OmOkaqd1Hju98GuCPs00pZecchjGT2n5fCx3cJxTD2sozSKRsZNCOLKfn6--0rMR9yexL9ml_hVToYy111jzJzOFeBNwc")
-	params.Set("a_bogus", "Qv4VhFtEQx85OpFGuKEtC31UEWxlNP8yqlTQbzLn9PxKOZUGDZHakcGeGxztf7uxnYBVkKVHsfsAbxxbTUkzZA9pzmkfSNt6jzVInX8o01qDbzvsErjDSL6FoXsc8bGulQ5yiAXfMUt72xO-NrdD%2Fp-Hy%2FbF5QmkQrQRk%2FzGOoG11zyAE1c-PptkihiKUenJ")
-
+	// cookie_enabled	true
+	// screen_width	2048
+	// screen_height	1152
+	// browser_language	zh-CN
+	// browser_platform	Win32
+	// browser_name	Mozilla
+	// browser_version	5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0
+	// browser_online	true
+	// timezone_name	Asia/Shanghai
+	// aid	1128
+	// support_h265	1
+	// msToken	E-qrN5_3s_GdJMz0_nDQm3nwc-Y4lyv0AAZPLCxZkofS0bz-I7dnsoY4_kVfOvQ5mvIHR6yYv6fJqx9OmOkaqd1Hju98GuCPs00pZecchjGT2n5fCx3cJxTD2sozSKRsZNCOLKfn6--0rMR9yexL9ml_hVToYy111jzJzOFeBNwc
+	// a_bogus	Qv4VhFtEQx85OpFGuKEtC31UEWxlNP8yqlTQbzLn9PxKOZUGDZHakcGeGxztf7uxnYBVkKVHsfsAbxxbTUkzZA9pzmkfSNt6jzVInX8o01qDbzvsErjDSL6FoXsc8bGulQ5yiAXfMUt72xO-NrdD/p-Hy/bF5QmkQrQRk/zGOoG11zyAE1c-PptkihiKUenJ
 	resp, err := c.client.R().
 		SetHeaders(map[string]string{
 			"Referer": "https://creator.douyin.com/creator-micro/content/post",
 		}).
 		SetResult(&UploadAuthResponse{}).
-		Get(fmt.Sprintf("%s/web/api/media/upload/auth/v5/?%s", douyinCreatorURL, params.Encode()))
+		SetQueryParams(map[string]string{
+			"aid":             "1128",
+			"support_h265":    "1",
+			"cookie_enabled":  "true",
+			"screen_width":    "2048",
+			"screen_height":   "1152",
+			"browser_language": "zh-CN",
+			"browser_platform": "Win32",
+			"browser_name":     "Mozilla",
+			"browser_version":  "5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0",
+			"browser_online":   "true",
+			"timezone_name":    "Asia/Shanghai",
+		}).
+		Get(fmt.Sprintf("%s/web/api/media/upload/auth/v5/", douyinCreatorURL))
 
 	if err != nil {
 		return nil, err

@@ -44,6 +44,21 @@ type BDTicketGuardClientData struct {
 	Timestamp  int64  `json:"timestamp"`
 }
 
+func NewBDSigner(tsSign string, ticket string, ecPrivateKey string, cert string) (*BDSigner, error) {
+	bd := &BDSigner{
+		TsSign:       tsSign,
+		Ticket:       ticket,
+		EcPrivateKey: ecPrivateKey,
+		Cert:         cert,
+	}
+	var err error
+	bd.derivedKey, err = bd.DeriveECDHKey()
+	if err != nil {
+		return nil, err
+	}
+	return bd, nil
+}
+
 // "ticket=hash.fvsLW/x06mCbBZxVS/RFz/Ly8/P9TdEBGIVKmPHY3mw=&path=/aweme/janus/creator/comment/aweme/v1/comment/publish/&timestamp=1756024739"
 func (b *BDSigner) BDSign(path string) (string, error) {
 	t := time.Now().Unix()

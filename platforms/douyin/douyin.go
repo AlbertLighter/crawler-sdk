@@ -1,10 +1,13 @@
 package douyin
 
 import (
+	"context"
 	"crawler-sdk/internal/crypto/dy/ab"
 	"crawler-sdk/internal/crypto/dy/auth"
+	"crawler-sdk/internal/crypto/dy/bd"
 	"crawler-sdk/pkg/http"
 	"math/rand"
+	"net/url"
 
 	"fmt"
 	"time"
@@ -24,15 +27,17 @@ type DyClient struct {
 
 // New 创建一个新的抖音客户端实例
 // cookie: 用于身份验证的抖音 cookie 字符串
-func New(cookie string) *DyClient {
+func New(cookie string, bdSigner *bd.BDSigner) *DyClient {
 	c := &DyClient{
 		client:       http.NewClient(cookie),
 		imagexClient: http.NewClient(""),
 		uploadClient: http.NewClient(""),
 	}
+	c.client.SetContext(context.WithValue(context.Background(), "bdSigner", bdSigner))
 	c.client.AddRequestMiddleware(headers)
 	c.client.AddRequestMiddleware(msToken)
 	c.client.AddRequestMiddleware(absign)
+	c.client.AddRequestMiddleware(bdSign)
 	c.imagexClient.AddRequestMiddleware(uploadSign)
 	c.imagexClient.AddRequestMiddleware(uploadHeaders)
 	// c.uploadClient.AddRequestMiddleware(uploadSign)
@@ -121,5 +126,27 @@ func uploadSign(c *resty.Client, req *resty.Request) error {
 		SessionToken:    a.SessionToken,
 	}
 	signer.AddAuthorization(credentials, time.Now())
+	return nil
+}
+
+func bdSign(c *resty.Client, req *resty.Request) error {
+	fmt.Println("bdSign")
+	u, err := url.Parse(req.URL)
+	if err != nil {
+		return err
+	}
+	b := c.Context().Value("bdSigner").(*bd.BDSigner)
+	s, err := b.BDSign(u.Path)
+	if err != nil {
+		return err
+	}
+
+	req.SetHeader("bd-ticket-guard-client-data", s)
+	req.SetHeader("bd-ticket-guard-web-sign-type", "1")
+	req.SetHeader("bd-ticket-guard-iteration-version", "1")
+	req.SetHeader("bd-ticket-guard-ree-public-key", "b.EcPublicKey")
+	req.SetHeader("bd-ticket-guard-version", "2")
+	req.SetHeader("bd-ticket-guard-web-version", "2")
+
 	return nil
 }

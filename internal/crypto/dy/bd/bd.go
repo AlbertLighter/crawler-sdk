@@ -26,12 +26,15 @@ type BDSigner struct {
 	TsSign string `json:"ts_sign"` //security-sdk/s_sdk_crypt_sdk
 	// ec_privateKey
 	EcPrivateKey string `json:"ec_private_key"` //security-sdk/s_sdk_sign_data_key/web_protect
+	// ec_publicKey
+	EcPublicKey string `json:"ec_public_key"` //security-sdk/s_sdk_sign_data_key/web_protect
 	// cert
 	Cert string `json:"cert"` //security-sdk/s_sdk_server_cert_key
 	// ticket
 	Ticket string `json:"ticket"`
 
-	derivedKey []byte //security-sdk/s_sdk_server_cert_key
+	derivedKey   []byte
+	reePublicKey string
 }
 
 // {"ts_sign":"ts.2.9325933b8bf09d548974044a575a30e44f819f094a033643db648fa7ad7fd41bc4fbe87d2319cf05318624ceda14911ca406dedbebeddb2e30fce8d4fa02575d","req_content":"ticket,path,timestamp","req_sign":"vr7Kg8mtcaTqTmJdRa9nZm5RE/0eSGq+IORFtq3WljU=","timestamp":1756023357}
@@ -44,15 +47,20 @@ type BDTicketGuardClientData struct {
 	Timestamp  int64  `json:"timestamp"`
 }
 
-func NewBDSigner(tsSign string, ticket string, ecPrivateKey string, cert string) (*BDSigner, error) {
+func NewBDSigner(tsSign string, ticket string, ecPrivateKey string, ecPublicKey string, cert string) (*BDSigner, error) {
 	bd := &BDSigner{
 		TsSign:       tsSign,
 		Ticket:       ticket,
 		EcPrivateKey: ecPrivateKey,
+		EcPublicKey:  ecPublicKey,
 		Cert:         cert,
 	}
 	var err error
-	bd.derivedKey, err = bd.DeriveECDHKey()
+	bd.derivedKey, err = bd.DeriveECDHKey(ecPrivateKey, cert)
+	if err != nil {
+		return nil, err
+	}
+	bd.reePublicKey, err = GetPubKeyBase64(bd.EcPrivateKey, bd.EcPublicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -81,9 +89,9 @@ func (b *BDSigner) BDSign(path string) (string, error) {
 // privateKeyPath: 本地私钥 PEM 文件的路径
 // peerCertPath: 对端证书 PEM 文件的路径
 // 返回派生出的 32 字节密钥
-func (b *BDSigner) DeriveECDHKey() ([]byte, error) {
+func (b *BDSigner) DeriveECDHKey(privateKeyStr string, cert string) ([]byte, error) {
 	// 1. 加载本地私钥
-	privKeyBlock, _ := pem.Decode([]byte(b.EcPrivateKey))
+	privKeyBlock, _ := pem.Decode([]byte(privateKeyStr))
 	if privKeyBlock == nil {
 		return nil, fmt.Errorf("无法解码 PEM 格式的私钥")
 	}
@@ -98,7 +106,7 @@ func (b *BDSigner) DeriveECDHKey() ([]byte, error) {
 	}
 
 	// 2. 加载对端的证书并提取公钥
-	certBlock, _ := pem.Decode([]byte(b.Cert))
+	certBlock, _ := pem.Decode([]byte(cert))
 	if certBlock == nil {
 		return nil, fmt.Errorf("无法解码 PEM 格式的证书")
 	}
